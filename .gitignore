@@ -1,0 +1,36 @@
+# Go binaries
+/bin/
+/obj/
+/*.exe
+/*.out
+
+# Build artifacts
+*.a
+*.o
+*.test
+*.exe
+
+# Vendor directory
+/vendor/
+
+# Go workspace
+/go.sum
+/go.mod
+
+# macOS specific files
+.DS_Store
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+
+# IDE specific files
+.idea/
+*.iml
+*.swp
+
+# Configuration files
+*.env
