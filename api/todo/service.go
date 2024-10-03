@@ -39,8 +39,27 @@ func GetUserTodos(ctx context.Context, userID primitive.ObjectID) (*[]ToDo, erro
 	}
 
 	// sort the results to make sure the order of the returned results matches the order of the ids in the users todos array
-	
-	return &result, nil
+	// result is unordered, u.Todos is ordered
+
+	// an empty slice for the sorted results
+	var sortedResult []ToDo
+
+	// creating a map of our todos for easy lookup
+	mapOfTodos := map[primitive.ObjectID]ToDo{}
+	for _, todo := range result {
+		mapOfTodos[todo.ID] = todo
+	}
+
+	// going through the array of the user
+	for _, id := range u.Todos {
+		// checking for each item to make sure it is contained in the map
+		todo, ok := mapOfTodos[id]
+		if ok {
+			sortedResult = append(sortedResult, todo)
+		}
+	}
+
+	return &sortedResult, nil
 }
 
 func CreateTodo(ctx context.Context, userID primitive.ObjectID, t createDTO) (*ToDo, error) {
