@@ -21,7 +21,3 @@ type UpdateTodoDTO struct {
 	Text  *string `json:"text,omitempty" bson:"text,omitempty"`
 	Done  *bool   `json:"done,omitempty" bson:"done,omitempty"`
 }
-
-type ReorderTodosDTO struct {
-	IDs []string `json:"ids" bson:"ids"`
-}

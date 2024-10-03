@@ -13,7 +13,7 @@ func router() *http.ServeMux {
 	myRouter.HandleFunc("GET /todo", middleware.AuthMiddleware(handlers.HandleGetTodos))
 	myRouter.HandleFunc("POST /todo", middleware.AuthMiddleware(handlers.HandleCreateTodo))
 	myRouter.HandleFunc("PUT /todo/{id}", middleware.AuthMiddleware(handlers.HandleUpdateTodo))
-	myRouter.HandleFunc("DELETE /todo/{id}", middleware.AuthMiddleware(handlers.HandleRemoveTodo))
+	myRouter.HandleFunc("DELETE /todo/{id}", middleware.AuthMiddleware(handlers.HandleDeleteTodo))
 	myRouter.HandleFunc("PUT /todo/reorder", middleware.AuthMiddleware(handlers.HandleReorderTodos))
 
 	myRouter.HandleFunc("POST /register", handlers.HandleRegister)

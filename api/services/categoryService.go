@@ -35,7 +35,7 @@ func CategoryExists(ctx context.Context, userID primitive.ObjectID, name string)
 
 func DeleteCategory(ctx context.Context, userID primitive.ObjectID, name string) error {
 	usersCollection := db.GetCollection("users")
-	_, err := usersCollection.UpdateOne(ctx, bson.M{"_id": userID}, bson.M{"$pull": bson.M{"categories": bson.M{"name": name}}})
+	err := usersCollection.FindOneAndUpdate(ctx, bson.M{"_id": userID, "categories.name": name}, bson.M{"$pull": bson.M{"categories": bson.M{"name": name}}}).Err()
 	if err != nil {
 		return err
 	}

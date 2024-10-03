@@ -61,7 +61,7 @@ func HandleLogin(w http.ResponseWriter, r *http.Request) {
 
 	token, err := user2.LoginUser(r.Context(), user)
 	if err != nil {
-		if err == mongo.ErrNoDocuments {
+		if errors.Is(err, mongo.ErrNoDocuments) {
 			http.Error(w, "User not found", http.StatusNotFound)
 			return
 		}

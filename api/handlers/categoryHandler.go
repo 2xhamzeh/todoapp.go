@@ -55,6 +55,9 @@ func HandleDeleteCategory(w http.ResponseWriter, r *http.Request) {
 
 	err = services.DeleteCategory(r.Context(), userID, categoryName)
 	if err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			http.Error(w, err.Error(), http.StatusNotFound)
+		}
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -97,7 +100,7 @@ func HandleAddTodoToCategory(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !allowed {
-		http.Error(w, "Todo is not yours", http.StatusUnauthorized)
+		http.Error(w, "Todo is not yours", http.StatusForbidden)
 		return
 	}
 
@@ -145,7 +148,7 @@ func HandleDeleteTodoFromCategory(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !allowed {
-		http.Error(w, "Todo is not yours", http.StatusUnauthorized)
+		http.Error(w, "Todo is not yours", http.StatusForbidden)
 		return
 	}
 

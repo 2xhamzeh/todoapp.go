@@ -4,7 +4,9 @@ import (
 	"ToDo/api/models"
 	"ToDo/api/services"
 	"encoding/json"
+	"errors"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
 	"net/http"
 )
 
@@ -92,6 +94,9 @@ func HandleUpdateTodo(w http.ResponseWriter, r *http.Request) {
 	// check if user is allowed to do the update
 	allowed, err := services.TodoBelongsToUser(r.Context(), userID, todoID)
 	if err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			http.Error(w, "Not Found", http.StatusNotFound)
+		}
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -115,7 +120,7 @@ func HandleUpdateTodo(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func HandleRemoveTodo(w http.ResponseWriter, r *http.Request) {
+func HandleDeleteTodo(w http.ResponseWriter, r *http.Request) {
 	// get the user id
 	userID, err := primitive.ObjectIDFromHex(r.Context().Value("userID").(string))
 	if err != nil {
@@ -133,6 +138,9 @@ func HandleRemoveTodo(w http.ResponseWriter, r *http.Request) {
 	// check if user is allowed to do the update
 	allowed, err := services.TodoBelongsToUser(r.Context(), userID, todoID)
 	if err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			http.Error(w, "Not Found", http.StatusNotFound)
+		}
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -163,14 +171,16 @@ func HandleReorderTodos(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// get the input array
-	ids := models.ReorderTodosDTO{}
+	ids := struct {
+		Order []string `json:"order"`
+	}{}
 	if err := json.NewDecoder(r.Body).Decode(&ids); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	var newOrder []primitive.ObjectID
-	for _, id := range ids.IDs {
+	for _, id := range ids.Order {
 		idObj, err := primitive.ObjectIDFromHex(id)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
