@@ -140,7 +140,7 @@ func Remove(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// call the method to delete the item
-	result, err := DeleteTodo(r.Context(), todoID)
+	result, err := DeleteTodo(r.Context(), userID, todoID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

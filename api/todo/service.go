@@ -37,6 +37,9 @@ func GetUserTodos(ctx context.Context, userID primitive.ObjectID) (*[]ToDo, erro
 		}
 		result = append(result, todo)
 	}
+
+	// sort the results to make sure the order of the returned results matches the order of the ids in the users todos array
+	
 	return &result, nil
 }
 
@@ -78,14 +81,23 @@ func UpdateTodo(ctx context.Context, todoID primitive.ObjectID, update updateDTO
 	return &result, nil
 }
 
-func DeleteTodo(ctx context.Context, todoID primitive.ObjectID) (*ToDo, error) {
+func DeleteTodo(ctx context.Context, userID primitive.ObjectID, todoID primitive.ObjectID) (*ToDo, error) {
 	todosCollection := config.GetCollection("todos")
-	// update the document
-	result := ToDo{}
-	err := todosCollection.FindOneAndDelete(ctx, bson.M{"_id": todoID}).Decode(&result)
+	usersCollection := config.GetCollection("users")
+
+	// remove The id of the item from the user
+	_, err := usersCollection.UpdateOne(ctx, bson.M{"_id": userID}, bson.M{"$pull": bson.M{"todos": todoID}})
 	if err != nil {
 		return nil, err
 	}
+
+	// delete the document
+	result := ToDo{}
+	err = todosCollection.FindOneAndDelete(ctx, bson.M{"_id": todoID}).Decode(&result)
+	if err != nil {
+		return nil, err
+	}
+
 	return &result, nil
 }
 
