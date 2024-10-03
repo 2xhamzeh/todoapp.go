@@ -33,7 +33,7 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 		}
 
 		// store userId in the context to access in controller
-		ctx := context.WithValue(r.Context(), "userId", userId)
+		ctx := context.WithValue(r.Context(), "userID", userId)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
