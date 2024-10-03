@@ -1,18 +1,14 @@
 package user
 
 import (
-	"ToDo/api/auth"
-	"ToDo/api/config"
 	"encoding/json"
-	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
 	"net/http"
 )
 
 func Register(w http.ResponseWriter, r *http.Request) {
-	userCollection := config.GetCollection("users")
-
 	// get the username and password
-	user := new(AuthDTO)
+	user := AuthDTO{}
 	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -25,73 +21,47 @@ func Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// check if username is taken
-	err := userCollection.FindOne(r.Context(), bson.M{"username": user.Username}).Err()
+	// check if username exists
+	err := UsernameExists(r.Context(), user.Username)
 	if err == nil {
-		http.Error(w, "Username already exists", http.StatusConflict)
+		http.Error(w, "Username taken", http.StatusBadRequest)
 		return
 	}
-
-	// hash password
-	hashedPassword, err := auth.HashPassword(user.Password)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	user.Password = hashedPassword
 
 	// save user
-	result, err := userCollection.InsertOne(r.Context(), user)
+	err = CreateUser(r.Context(), user)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	w.WriteHeader(http.StatusCreated)
-	if err := json.NewEncoder(w).Encode(result); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
 }
 
 func Login(w http.ResponseWriter, r *http.Request) {
-	userCollection := config.GetCollection("users")
-
 	// get the input
-	input := new(AuthDTO)
-	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+	user := AuthDTO{}
+	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	// validate input
-	if input.Username == "" || input.Password == "" {
+	if user.Username == "" || user.Password == "" {
 		http.Error(w, "Invalid input", http.StatusBadRequest)
 		return
 	}
 
-	// check if user exists
-	user := new(User)
-	err := userCollection.FindOne(r.Context(), bson.M{"username": input.Username}).Decode(&user)
+	token, err := LoginUser(r.Context(), user)
 	if err != nil {
-		http.Error(w, "Invalid username", http.StatusNotFound)
-		return
-	}
-
-	// check password
-	isAuth := auth.CheckPasswordHash(input.Password, user.Password)
-	if !isAuth {
-		http.Error(w, "Invalid password", http.StatusUnauthorized)
-		return
-	}
-
-	// generate token
-	token, err := auth.GenerateJWT(user.ID.Hex())
-	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			http.Error(w, "User not found", http.StatusNotFound)
+			return
+		}
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	w.Header().Set("Authorization", "Bearer "+token)
+	w.Header().Set("Authorization", "Bearer "+*token)
 	w.WriteHeader(http.StatusOK)
 }
