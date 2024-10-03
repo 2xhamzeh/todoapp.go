@@ -1,8 +1,8 @@
-package todo
+package services
 
 import (
-	"ToDo/api/config"
-	"ToDo/api/user"
+	"ToDo/api/db"
+	"ToDo/api/models"
 	"context"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -10,14 +10,14 @@ import (
 	"slices"
 )
 
-func GetUserTodos(ctx context.Context, userID primitive.ObjectID) (*[]ToDo, error) {
+func GetTodos(ctx context.Context, userID primitive.ObjectID) (*[]models.ToDo, error) {
 	// array of todo ids
 	todoArray, err := getUserTodosIDArray(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
 
-	result, err := getTodosFromIDArray(ctx, todoArray)
+	result, err := GetTodosFromIDArray(ctx, todoArray)
 	if err != nil {
 		return nil, err
 	}
@@ -27,12 +27,12 @@ func GetUserTodos(ctx context.Context, userID primitive.ObjectID) (*[]ToDo, erro
 	return sortedResult, nil
 }
 
-func CreateTodo(ctx context.Context, userID primitive.ObjectID, t createDTO) (*ToDo, error) {
-	usersCollection := config.GetCollection("users")
-	todosCollection := config.GetCollection("todos")
+func CreateTodo(ctx context.Context, userID primitive.ObjectID, t models.CreateTodoDTO) (*models.ToDo, error) {
+	usersCollection := db.GetCollection("users")
+	todosCollection := db.GetCollection("todos")
 
 	// construct the item we want to insert
-	todo := ToDo{
+	todo := models.ToDo{
 		primitive.NewObjectID(),
 		t.Title,
 		t.Text,
@@ -54,10 +54,10 @@ func CreateTodo(ctx context.Context, userID primitive.ObjectID, t createDTO) (*T
 	return &todo, nil
 }
 
-func UpdateTodo(ctx context.Context, todoID primitive.ObjectID, update updateDTO) (*ToDo, error) {
-	todosCollection := config.GetCollection("todos")
+func UpdateTodo(ctx context.Context, todoID primitive.ObjectID, update models.UpdateTodoDTO) (*models.ToDo, error) {
+	todosCollection := db.GetCollection("todos")
 	// update the document
-	result := ToDo{}
+	result := models.ToDo{}
 	err := todosCollection.FindOneAndUpdate(ctx, bson.M{"_id": todoID}, bson.M{"$set": update}, options.FindOneAndUpdate().SetReturnDocument(options.After)).Decode(&result)
 	if err != nil {
 		return nil, err
@@ -65,9 +65,9 @@ func UpdateTodo(ctx context.Context, todoID primitive.ObjectID, update updateDTO
 	return &result, nil
 }
 
-func DeleteTodo(ctx context.Context, userID primitive.ObjectID, todoID primitive.ObjectID) (*ToDo, error) {
-	todosCollection := config.GetCollection("todos")
-	usersCollection := config.GetCollection("users")
+func DeleteTodo(ctx context.Context, userID primitive.ObjectID, todoID primitive.ObjectID) (*models.ToDo, error) {
+	todosCollection := db.GetCollection("todos")
+	usersCollection := db.GetCollection("users")
 
 	// remove The id of the item from the user
 	_, err := usersCollection.UpdateOne(ctx, bson.M{"_id": userID}, bson.M{"$pull": bson.M{"todos": todoID}})
@@ -76,7 +76,7 @@ func DeleteTodo(ctx context.Context, userID primitive.ObjectID, todoID primitive
 	}
 
 	// delete the document
-	result := ToDo{}
+	result := models.ToDo{}
 	err = todosCollection.FindOneAndDelete(ctx, bson.M{"_id": todoID}).Decode(&result)
 	if err != nil {
 		return nil, err
@@ -85,10 +85,10 @@ func DeleteTodo(ctx context.Context, userID primitive.ObjectID, todoID primitive
 	return &result, nil
 }
 
-func BelongsToUser(ctx context.Context, userID primitive.ObjectID, todoID primitive.ObjectID) (bool, error) {
-	usersCollection := config.GetCollection("users")
+func TodoBelongsToUser(ctx context.Context, userID primitive.ObjectID, todoID primitive.ObjectID) (bool, error) {
+	usersCollection := db.GetCollection("users")
 
-	u := user.User{}
+	u := models.User{}
 	err := usersCollection.FindOne(ctx, bson.M{"_id": userID}).Decode(&u)
 	if err != nil {
 		return false, err
@@ -108,11 +108,11 @@ func SortTodos(ctx context.Context, userID primitive.ObjectID, newOrder []primit
 		return false, err
 	}
 	//fmt.Println(currentOrder)
-	if !sliceHasSameContent(currentOrder, newOrder) {
+	if !idSliceHasSameContent(currentOrder, newOrder) {
 		return false, nil
 	}
 
-	usersCollection := config.GetCollection("users")
+	usersCollection := db.GetCollection("users")
 	_, err = usersCollection.UpdateOne(ctx, bson.M{"_id": userID}, bson.M{"$set": bson.M{"todos": newOrder}})
 	if err != nil {
 		return false, err
@@ -121,7 +121,7 @@ func SortTodos(ctx context.Context, userID primitive.ObjectID, newOrder []primit
 }
 
 // this method checks if two slices have the same elements, it ignores the order
-func sliceHasSameContent(x []primitive.ObjectID, y []primitive.ObjectID) bool {
+func idSliceHasSameContent(x []primitive.ObjectID, y []primitive.ObjectID) bool {
 	if len(x) != len(y) {
 		return false
 	}
@@ -142,9 +142,9 @@ func sliceHasSameContent(x []primitive.ObjectID, y []primitive.ObjectID) bool {
 }
 
 func getUserTodosIDArray(ctx context.Context, userID primitive.ObjectID) ([]primitive.ObjectID, error) {
-	usersCollection := config.GetCollection("users")
+	usersCollection := db.GetCollection("users")
 	// get the user
-	u := user.User{}
+	u := models.User{}
 	err := usersCollection.FindOne(ctx, bson.M{"_id": userID}).Decode(&u)
 	if err != nil {
 		return nil, err
@@ -152,8 +152,8 @@ func getUserTodosIDArray(ctx context.Context, userID primitive.ObjectID) ([]prim
 	return u.Todos, nil
 }
 
-func getTodosFromIDArray(ctx context.Context, todoIDArr []primitive.ObjectID) ([]ToDo, error) {
-	todosCollection := config.GetCollection("todos")
+func GetTodosFromIDArray(ctx context.Context, todoIDArr []primitive.ObjectID) ([]models.ToDo, error) {
+	todosCollection := db.GetCollection("todos")
 
 	// get the todos of the user
 	cursor, err := todosCollection.Find(ctx, bson.M{"_id": bson.M{"$in": todoIDArr}}) // query all the todos with an id in the todos array in the user
@@ -161,9 +161,9 @@ func getTodosFromIDArray(ctx context.Context, todoIDArr []primitive.ObjectID) ([
 		return nil, err
 	}
 	// we use this instead of var result [], to make sure we get an empty slice and not nil if the user has no todos
-	result := make([]ToDo, 0)
+	result := make([]models.ToDo, 0)
 	for cursor.Next(ctx) {
-		todo := ToDo{}
+		todo := models.ToDo{}
 		err = cursor.Decode(&todo) // we use a pointer (&) to make sure we decode to our variable and not a copy
 		if err != nil {
 			return nil, err
@@ -173,13 +173,13 @@ func getTodosFromIDArray(ctx context.Context, todoIDArr []primitive.ObjectID) ([
 	return result, nil
 }
 
-func sortTodosBasedOnIDArray(ctx context.Context, todoIDArr []primitive.ObjectID, Todos []ToDo) *[]ToDo {
+func sortTodosBasedOnIDArray(ctx context.Context, todoIDArr []primitive.ObjectID, Todos []models.ToDo) *[]models.ToDo {
 	// sort the results to make sure the order of the returned results matches the order of the ids in the users todos array
 	// an empty slice for the sorted results
-	sortedResult := make([]ToDo, 0)
+	sortedResult := make([]models.ToDo, 0)
 
 	// creating a map of our todos for easy lookup
-	mapOfTodos := map[primitive.ObjectID]ToDo{}
+	mapOfTodos := map[primitive.ObjectID]models.ToDo{}
 	for _, todo := range Todos {
 		mapOfTodos[todo.ID] = todo
 	}

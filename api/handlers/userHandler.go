@@ -1,14 +1,17 @@
-package user
+package handlers
 
 import (
+	"ToDo/api/models"
+	user2 "ToDo/api/services"
 	"encoding/json"
+	"errors"
 	"go.mongodb.org/mongo-driver/mongo"
 	"net/http"
 )
 
-func Register(w http.ResponseWriter, r *http.Request) {
+func HandleRegister(w http.ResponseWriter, r *http.Request) {
 	// get the username and password
-	user := AuthDTO{}
+	user := models.AuthDTO{}
 	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -22,14 +25,18 @@ func Register(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// check if username exists
-	err := UsernameExists(r.Context(), user.Username)
+	err := user2.UsernameExists(r.Context(), user.Username)
 	if err == nil {
 		http.Error(w, "Username taken", http.StatusBadRequest)
 		return
+	} else {
+		if !errors.Is(err, mongo.ErrNoDocuments) {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
 	}
 
 	// save user
-	err = CreateUser(r.Context(), user)
+	err = user2.CreateUser(r.Context(), user)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -38,9 +45,9 @@ func Register(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusCreated)
 }
 
-func Login(w http.ResponseWriter, r *http.Request) {
+func HandleLogin(w http.ResponseWriter, r *http.Request) {
 	// get the input
-	user := AuthDTO{}
+	user := models.AuthDTO{}
 	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -52,7 +59,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, err := LoginUser(r.Context(), user)
+	token, err := user2.LoginUser(r.Context(), user)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
 			http.Error(w, "User not found", http.StatusNotFound)

@@ -1,12 +1,14 @@
-package todo
+package handlers
 
 import (
+	"ToDo/api/models"
+	"ToDo/api/services"
 	"encoding/json"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"net/http"
 )
 
-func GetAll(w http.ResponseWriter, r *http.Request) {
+func HandleGetTodos(w http.ResponseWriter, r *http.Request) {
 	// get the users ID
 	userID, err := primitive.ObjectIDFromHex(r.Context().Value("userID").(string))
 	if err != nil {
@@ -15,7 +17,7 @@ func GetAll(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// get the items of the user
-	result, err := GetUserTodos(r.Context(), userID)
+	result, err := services.GetTodos(r.Context(), userID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -29,7 +31,7 @@ func GetAll(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func Create(w http.ResponseWriter, r *http.Request) {
+func HandleCreateTodo(w http.ResponseWriter, r *http.Request) {
 	// get the user id from context
 	userID, err := primitive.ObjectIDFromHex(r.Context().Value("userID").(string))
 	if err != nil {
@@ -38,7 +40,7 @@ func Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// parse the body for the input
-	t := createDTO{}
+	t := models.CreateTodoDTO{}
 	if err := json.NewDecoder(r.Body).Decode(&t); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -51,7 +53,7 @@ func Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// create the item by calling the service layer
-	todo, err := CreateTodo(r.Context(), userID, t)
+	todo, err := services.CreateTodo(r.Context(), userID, t)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -65,7 +67,7 @@ func Create(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func Update(w http.ResponseWriter, r *http.Request) {
+func HandleUpdateTodo(w http.ResponseWriter, r *http.Request) {
 	// get user id
 	userID, err := primitive.ObjectIDFromHex(r.Context().Value("userID").(string))
 	if err != nil {
@@ -81,14 +83,14 @@ func Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// get the fields we need to update
-	update := updateDTO{}
+	update := models.UpdateTodoDTO{}
 	if err := json.NewDecoder(r.Body).Decode(&update); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	// check if user is allowed to do the update
-	allowed, err := BelongsToUser(r.Context(), userID, todoID)
+	allowed, err := services.TodoBelongsToUser(r.Context(), userID, todoID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -99,7 +101,7 @@ func Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// call the method to update the item
-	result, err := UpdateTodo(r.Context(), todoID, update)
+	result, err := services.UpdateTodo(r.Context(), todoID, update)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -113,7 +115,7 @@ func Update(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func Remove(w http.ResponseWriter, r *http.Request) {
+func HandleRemoveTodo(w http.ResponseWriter, r *http.Request) {
 	// get the user id
 	userID, err := primitive.ObjectIDFromHex(r.Context().Value("userID").(string))
 	if err != nil {
@@ -129,7 +131,7 @@ func Remove(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// check if user is allowed to do the update
-	allowed, err := BelongsToUser(r.Context(), userID, todoID)
+	allowed, err := services.TodoBelongsToUser(r.Context(), userID, todoID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -140,7 +142,7 @@ func Remove(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// call the method to delete the item
-	result, err := DeleteTodo(r.Context(), userID, todoID)
+	result, err := services.DeleteTodo(r.Context(), userID, todoID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -153,7 +155,7 @@ func Remove(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func ReOrder(w http.ResponseWriter, r *http.Request) {
+func HandleReorderTodos(w http.ResponseWriter, r *http.Request) {
 	userID, err := primitive.ObjectIDFromHex(r.Context().Value("userID").(string))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -161,7 +163,7 @@ func ReOrder(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// get the input array
-	ids := ReOrderDTO{}
+	ids := models.ReorderTodosDTO{}
 	if err := json.NewDecoder(r.Body).Decode(&ids); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -177,7 +179,7 @@ func ReOrder(w http.ResponseWriter, r *http.Request) {
 		newOrder = append(newOrder, idObj)
 	}
 
-	sorted, err := SortTodos(r.Context(), userID, newOrder)
+	sorted, err := services.SortTodos(r.Context(), userID, newOrder)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

@@ -2,13 +2,13 @@ package main
 
 import (
 	"ToDo/api"
-	"ToDo/api/config"
+	"ToDo/api/db"
 )
 
 func main() {
 
 	// connect to database
-	config.DBConnect()
+	db.DBConnect()
 	// start the server
 	api.Server()
 
