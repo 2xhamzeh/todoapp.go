@@ -21,3 +21,7 @@ type updateDTO struct {
 	Text  *string `json:"text,omitempty" bson:"text,omitempty"`
 	Done  *bool   `json:"done,omitempty" bson:"done,omitempty"`
 }
+
+type ReOrderDTO struct {
+	IDs []string `json:"ids" bson:"ids"`
+}

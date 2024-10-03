@@ -152,3 +152,39 @@ func Remove(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 }
+
+func ReOrder(w http.ResponseWriter, r *http.Request) {
+	userID, err := primitive.ObjectIDFromHex(r.Context().Value("userID").(string))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// get the input array
+	ids := ReOrderDTO{}
+	if err := json.NewDecoder(r.Body).Decode(&ids); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	var newOrder []primitive.ObjectID
+	for _, id := range ids.IDs {
+		idObj, err := primitive.ObjectIDFromHex(id)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		newOrder = append(newOrder, idObj)
+	}
+
+	sorted, err := SortTodos(r.Context(), userID, newOrder)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if !sorted {
+		http.Error(w, "Invalid input", http.StatusBadRequest)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+}

@@ -101,6 +101,46 @@ func BelongsToUser(ctx context.Context, userID primitive.ObjectID, todoID primit
 	return true, nil
 }
 
+func SortTodos(ctx context.Context, userID primitive.ObjectID, newOrder []primitive.ObjectID) (bool, error) {
+	//fmt.Println(newOrder)
+	currentOrder, err := getUserTodosIDArray(ctx, userID)
+	if err != nil {
+		return false, err
+	}
+	//fmt.Println(currentOrder)
+	if !sliceHasSameContent(currentOrder, newOrder) {
+		return false, nil
+	}
+
+	usersCollection := config.GetCollection("users")
+	_, err = usersCollection.UpdateOne(ctx, bson.M{"_id": userID}, bson.M{"$set": bson.M{"todos": newOrder}})
+	if err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+// this method checks if two slices have the same elements, it ignores the order
+func sliceHasSameContent(x []primitive.ObjectID, y []primitive.ObjectID) bool {
+	if len(x) != len(y) {
+		return false
+	}
+
+	diff := map[primitive.ObjectID]int{}
+	for _, id := range x {
+		diff[id]++
+	}
+	for _, id := range y {
+		diff[id]--
+	}
+	for _, v := range diff {
+		if v != 0 {
+			return false
+		}
+	}
+	return true
+}
+
 func getUserTodosIDArray(ctx context.Context, userID primitive.ObjectID) ([]primitive.ObjectID, error) {
 	usersCollection := config.GetCollection("users")
 	// get the user
@@ -136,7 +176,7 @@ func getTodosFromIDArray(ctx context.Context, todoIDArr []primitive.ObjectID) ([
 func sortTodosBasedOnIDArray(ctx context.Context, todoIDArr []primitive.ObjectID, Todos []ToDo) *[]ToDo {
 	// sort the results to make sure the order of the returned results matches the order of the ids in the users todos array
 	// an empty slice for the sorted results
-	var sortedResult []ToDo
+	sortedResult := make([]ToDo, 0)
 
 	// creating a map of our todos for easy lookup
 	mapOfTodos := map[primitive.ObjectID]ToDo{}

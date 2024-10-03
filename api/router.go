@@ -15,6 +15,7 @@ func router() *http.ServeMux {
 	myRouter.HandleFunc("POST /todo", middleware.AuthMiddleware(todo.Create))
 	myRouter.HandleFunc("PUT /todo/{id}", middleware.AuthMiddleware(todo.Update))
 	myRouter.HandleFunc("DELETE /todo/{id}", middleware.AuthMiddleware(todo.Remove))
+	myRouter.HandleFunc("PUT /todo/reorder", middleware.AuthMiddleware(todo.ReOrder))
 
 	myRouter.HandleFunc("POST /register", user.Register)
 	myRouter.HandleFunc("POST /login", user.Login)
