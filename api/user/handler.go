@@ -20,7 +20,7 @@ func Register(w http.ResponseWriter, r *http.Request) {
 
 	// validate the input
 	// note len() returns byte length not string length
-	if user.Password == "" || user.Username == "" || len(user.Password) < 5 || len(user.Username) < 5 {
+	if user.Password == "" || user.Username == "" || len(user.Password) < 6 || len(user.Username) < 3 {
 		http.Error(w, "Invalid input", http.StatusBadRequest)
 		return
 	}
@@ -95,4 +95,3 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Authorization", "Bearer "+token)
 	w.WriteHeader(http.StatusOK)
 }
-func Logout(w http.ResponseWriter, r *http.Request) {}

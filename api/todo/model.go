@@ -3,11 +3,10 @@ package todo
 import "go.mongodb.org/mongo-driver/bson/primitive"
 
 type ToDo struct {
-	ID     primitive.ObjectID `bson:"_id" json:"id"`
-	UserID primitive.ObjectID `bson:"user_id" json:"user_id"`
-	Title  string             `bson:"title" json:"title"`
-	Text   string             `bson:"text" json:"text"`
-	Done   bool               `bson:"done" json:"done"`
+	ID    primitive.ObjectID `bson:"_id" json:"id"`
+	Title string             `bson:"title" json:"title"`
+	Text  string             `bson:"text" json:"text"`
+	Done  bool               `bson:"done" json:"done"`
 }
 
 type createDTO struct {

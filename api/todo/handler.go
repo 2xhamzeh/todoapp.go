@@ -2,19 +2,33 @@ package todo
 
 import (
 	"ToDo/api/config"
+	"ToDo/api/user"
 	"encoding/json"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"net/http"
+	"slices"
 )
 
 func GetAll(w http.ResponseWriter, r *http.Request) {
+	usersCollection := config.GetCollection("users")
 	todosCollection := config.GetCollection("todos")
 
 	userIdph := r.Context().Value("userId")
 	userId, err := primitive.ObjectIDFromHex(userIdph.(string))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 
-	cursor, err := todosCollection.Find(r.Context(), bson.M{"user_id": userId})
+	u := new(user.User)
+	err = usersCollection.FindOne(r.Context(), bson.M{"_id": userId}).Decode(&u)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	cursor, err := todosCollection.Find(r.Context(), bson.M{"_id": bson.M{"$in": u.Todos}})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -38,38 +52,54 @@ func GetAll(w http.ResponseWriter, r *http.Request) {
 }
 
 func Create(w http.ResponseWriter, r *http.Request) {
+	// get the collections
 	todosCollection := config.GetCollection("todos")
+	usersCollection := config.GetCollection("users")
 
+	// get the user id from context
 	userIdph := r.Context().Value("userId")
 	userId, err := primitive.ObjectIDFromHex(userIdph.(string))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
 
-	// parse the body
+	// parse the body for the input
 	t := new(createDTO)
 	if err := json.NewDecoder(r.Body).Decode(&t); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	// Validate input
+	// Validate input, only title is required, text is optional
 	if t.Title == "" {
 		http.Error(w, "Title is required", http.StatusBadRequest)
 		return
 	}
 
-	// insert the todo item to the database
-	result, err := todosCollection.InsertOne(r.Context(), bson.M{
-		"user_id": userId,
-		"title":   t.Title,
-		"text":    t.Text,
-		"done":    false,
-	})
+	// create the item we want to insert
+	todo := ToDo{
+		primitive.NewObjectID(),
+		t.Title,
+		t.Text,
+		false,
+	}
+
+	// insert the item to the database
+	_, err = todosCollection.InsertOne(r.Context(), todo)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	// insert the id of the item to the users collections array
+	_, err = usersCollection.UpdateOne(r.Context(), bson.M{"_id": userId}, bson.M{"$push": bson.M{"todos": todo.ID}})
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+
 	// return a success response
 	w.WriteHeader(http.StatusCreated)
-	if err := json.NewEncoder(w).Encode(result); err != nil {
+	if err := json.NewEncoder(w).Encode(todo); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -77,9 +107,13 @@ func Create(w http.ResponseWriter, r *http.Request) {
 
 func Update(w http.ResponseWriter, r *http.Request) {
 	todosCollection := config.GetCollection("todos")
+	usersCollection := config.GetCollection("users")
 
 	userIdph := r.Context().Value("userId")
 	userId, err := primitive.ObjectIDFromHex(userIdph.(string))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
 
 	// get todos id
 	idPlaceHolder := r.PathValue("id")
@@ -89,6 +123,18 @@ func Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// check if the item belongs to the user
+	u := new(user.User)
+	err = usersCollection.FindOne(r.Context(), bson.M{"_id": userId}).Decode(&u)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+
+	isOwnedByUser := slices.Contains(u.Todos, id)
+	if !isOwnedByUser {
+		http.Error(w, "No access", http.StatusBadRequest)
+	}
+
 	update := new(updateDTO)
 	if err := json.NewDecoder(r.Body).Decode(&update); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -96,7 +142,7 @@ func Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// update the document
-	result, err := todosCollection.UpdateOne(r.Context(), bson.M{"_id": id, "user_id": userId}, bson.M{"$set": update})
+	result, err := todosCollection.UpdateOne(r.Context(), bson.M{"_id": id}, bson.M{"$set": update})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -110,6 +156,7 @@ func Update(w http.ResponseWriter, r *http.Request) {
 
 func Remove(w http.ResponseWriter, r *http.Request) {
 	todosCollection := config.GetCollection("todos")
+	usersCollection := config.GetCollection("users")
 
 	userIdph := r.Context().Value("userId")
 	userId, err := primitive.ObjectIDFromHex(userIdph.(string))
@@ -122,8 +169,20 @@ func Remove(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// delete the todo
-	result, err := todosCollection.DeleteOne(r.Context(), bson.M{"_id": id, "user_id": userId})
+	// check if the item belongs to the user
+	u := new(user.User)
+	err = usersCollection.FindOne(r.Context(), bson.M{"_id": userId}).Decode(&u)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+
+	isOwnedByUser := slices.Contains(u.Todos, id)
+	if !isOwnedByUser {
+		http.Error(w, "No access", http.StatusBadRequest)
+	}
+
+	// delete the item
+	result, err := todosCollection.DeleteOne(r.Context(), bson.M{"_id": id})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

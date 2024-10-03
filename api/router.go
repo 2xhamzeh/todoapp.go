@@ -18,7 +18,6 @@ func router() *http.ServeMux {
 
 	myRouter.HandleFunc("POST /register", user.Register)
 	myRouter.HandleFunc("POST /login", user.Login)
-	myRouter.HandleFunc("POST /logout", user.Logout)
 
 	return myRouter
 }
