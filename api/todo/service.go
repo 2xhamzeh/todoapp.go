@@ -11,55 +11,20 @@ import (
 )
 
 func GetUserTodos(ctx context.Context, userID primitive.ObjectID) (*[]ToDo, error) {
-	// get the collections
-	usersCollection := config.GetCollection("users")
-	todosCollection := config.GetCollection("todos")
-
-	// get the user
-	u := user.User{}
-	err := usersCollection.FindOne(ctx, bson.M{"_id": userID}).Decode(&u)
+	// array of todo ids
+	todoArray, err := getUserTodosIDArray(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
 
-	// get the todos of the user
-	cursor, err := todosCollection.Find(ctx, bson.M{"_id": bson.M{"$in": u.Todos}}) // query all the todos with an id in the todos array in the user
+	result, err := getTodosFromIDArray(ctx, todoArray)
 	if err != nil {
 		return nil, err
 	}
-	// we use this instead of var result [], to make sure we get an empty slice and not nil if the user has no todos
-	result := make([]ToDo, 0)
-	for cursor.Next(ctx) {
-		todo := ToDo{}
-		err := cursor.Decode(&todo) // we use a pointer (&) to make sure we decode to our variable and not a copy
-		if err != nil {
-			return nil, err
-		}
-		result = append(result, todo)
-	}
 
-	// sort the results to make sure the order of the returned results matches the order of the ids in the users todos array
-	// result is unordered, u.Todos is ordered
+	sortedResult := sortTodosBasedOnIDArray(ctx, todoArray, result)
 
-	// an empty slice for the sorted results
-	var sortedResult []ToDo
-
-	// creating a map of our todos for easy lookup
-	mapOfTodos := map[primitive.ObjectID]ToDo{}
-	for _, todo := range result {
-		mapOfTodos[todo.ID] = todo
-	}
-
-	// going through the array of the user
-	for _, id := range u.Todos {
-		// checking for each item to make sure it is contained in the map
-		todo, ok := mapOfTodos[id]
-		if ok {
-			sortedResult = append(sortedResult, todo)
-		}
-	}
-
-	return &sortedResult, nil
+	return sortedResult, nil
 }
 
 func CreateTodo(ctx context.Context, userID primitive.ObjectID, t createDTO) (*ToDo, error) {
@@ -134,4 +99,59 @@ func BelongsToUser(ctx context.Context, userID primitive.ObjectID, todoID primit
 		return false, nil
 	}
 	return true, nil
+}
+
+func getUserTodosIDArray(ctx context.Context, userID primitive.ObjectID) ([]primitive.ObjectID, error) {
+	usersCollection := config.GetCollection("users")
+	// get the user
+	u := user.User{}
+	err := usersCollection.FindOne(ctx, bson.M{"_id": userID}).Decode(&u)
+	if err != nil {
+		return nil, err
+	}
+	return u.Todos, nil
+}
+
+func getTodosFromIDArray(ctx context.Context, todoIDArr []primitive.ObjectID) ([]ToDo, error) {
+	todosCollection := config.GetCollection("todos")
+
+	// get the todos of the user
+	cursor, err := todosCollection.Find(ctx, bson.M{"_id": bson.M{"$in": todoIDArr}}) // query all the todos with an id in the todos array in the user
+	if err != nil {
+		return nil, err
+	}
+	// we use this instead of var result [], to make sure we get an empty slice and not nil if the user has no todos
+	result := make([]ToDo, 0)
+	for cursor.Next(ctx) {
+		todo := ToDo{}
+		err = cursor.Decode(&todo) // we use a pointer (&) to make sure we decode to our variable and not a copy
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, todo)
+	}
+	return result, nil
+}
+
+func sortTodosBasedOnIDArray(ctx context.Context, todoIDArr []primitive.ObjectID, Todos []ToDo) *[]ToDo {
+	// sort the results to make sure the order of the returned results matches the order of the ids in the users todos array
+	// an empty slice for the sorted results
+	var sortedResult []ToDo
+
+	// creating a map of our todos for easy lookup
+	mapOfTodos := map[primitive.ObjectID]ToDo{}
+	for _, todo := range Todos {
+		mapOfTodos[todo.ID] = todo
+	}
+
+	// going through the array of the user
+	for _, id := range todoIDArr {
+		// checking for each item to make sure it is contained in the map
+		todo, ok := mapOfTodos[id]
+		if ok {
+			sortedResult = append(sortedResult, todo)
+		}
+	}
+
+	return &sortedResult
 }
