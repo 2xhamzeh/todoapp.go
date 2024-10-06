@@ -20,12 +20,13 @@ func HandleCreateCategory(w http.ResponseWriter, r *http.Request) {
 	categoryName := r.PathValue("name")
 
 	// check if it already exists
-	err = services.CategoryExists(r.Context(), userID, categoryName)
-	if err == nil {
-		http.Error(w, "Category already exists", http.StatusConflict)
-		return
-	} else if !errors.Is(err, mongo.ErrNoDocuments) {
+	exists, err := services.CategoryExists(r.Context(), userID, categoryName)
+	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if exists {
+		http.Error(w, "Category already exists", http.StatusConflict)
 		return
 	}
 
@@ -83,14 +84,14 @@ func HandleAddTodoToCategory(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// check if category doesn't exist
-	err = services.CategoryExists(r.Context(), userID, categoryName)
+	// check if it doesn't exist
+	exists, err := services.CategoryExists(r.Context(), userID, categoryName)
 	if err != nil {
-		if errors.Is(err, mongo.ErrNoDocuments) {
-			http.Error(w, "Category doesn't exist", http.StatusNotFound)
-			return
-		}
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if !exists {
+		http.Error(w, "Category doesn't exist", http.StatusNotFound)
 		return
 	}
 
@@ -131,17 +132,16 @@ func HandleDeleteTodoFromCategory(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// check if category doesn't exist
-	err = services.CategoryExists(r.Context(), userID, categoryName)
+	// check if it doesn't exist
+	exists, err := services.CategoryExists(r.Context(), userID, categoryName)
 	if err != nil {
-		if errors.Is(err, mongo.ErrNoDocuments) {
-			http.Error(w, "Category doesn't exist", http.StatusNotFound)
-			return
-		}
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-
+	if !exists {
+		http.Error(w, "Category doesn't exist", http.StatusNotFound)
+		return
+	}
 	// check if user owns the todo
 	allowed, err := services.TodoBelongsToUser(r.Context(), userID, id)
 	if err != nil {
@@ -189,14 +189,14 @@ func HandleGetCategoryTodos(w http.ResponseWriter, r *http.Request) {
 
 	// get category name
 	categoryName := r.PathValue("name")
-	// check if category doesn't exist
-	err = services.CategoryExists(r.Context(), userID, categoryName)
+	// check if it doesn't exist
+	exists, err := services.CategoryExists(r.Context(), userID, categoryName)
 	if err != nil {
-		if errors.Is(err, mongo.ErrNoDocuments) {
-			http.Error(w, "Category doesn't exist", http.StatusNotFound)
-			return
-		}
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if !exists {
+		http.Error(w, "Category doesn't exist", http.StatusNotFound)
 		return
 	}
 	// get array with category todo ids

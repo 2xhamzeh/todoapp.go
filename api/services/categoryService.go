@@ -7,6 +7,7 @@ import (
 	"errors"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 func CreateCategory(ctx context.Context, userID primitive.ObjectID, name string) (*models.Category, error) {
@@ -26,11 +27,17 @@ func CreateCategory(ctx context.Context, userID primitive.ObjectID, name string)
 // CategoryExists : if err is nil, category exists.
 // if err is ErrNoDocument, category doesn't exist.
 // if err is different, internal error
-func CategoryExists(ctx context.Context, userID primitive.ObjectID, name string) error {
+func CategoryExists(ctx context.Context, userID primitive.ObjectID, name string) (bool, error) {
 	usersCollection := db.GetCollection("users")
 	// check if the category already exists
 	err := usersCollection.FindOne(ctx, bson.M{"_id": userID, "categories.name": name}).Err()
-	return err
+	if err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return false, nil
+		}
+		return false, err
+	}
+	return true, nil
 }
 
 func DeleteCategory(ctx context.Context, userID primitive.ObjectID, name string) error {
