@@ -48,7 +48,7 @@ func UnshareWithUser(ctx context.Context, usernameToUnshareWith string, userID p
 }
 
 // checks if the username shared their todos with the authetnicated user
-func CheckIfUsernameSharedWithAuthUser(ctx context.Context, username string, userID primitive.ObjectID) (bool, error) {
+func CheckIfUsernameSharedWithUser(ctx context.Context, username string, userID primitive.ObjectID) (bool, error) {
 	usersCollection := db.GetCollection("users")
 	user := models.User{}
 	err := usersCollection.FindOne(ctx, bson.M{"_id": userID}).Decode(&user)
@@ -63,7 +63,7 @@ func CheckIfUsernameSharedWithAuthUser(ctx context.Context, username string, use
 }
 
 // checks if the authenticated user shared their todos with the username
-func CheckIfAuthUserSharedWithUsername(ctx context.Context, username string, userID primitive.ObjectID) (bool, error) {
+func CheckIfUserSharedWithUsername(ctx context.Context, username string, userID primitive.ObjectID) (bool, error) {
 	usersCollection := db.GetCollection("users")
 	user := models.User{}
 	err := usersCollection.FindOne(ctx, bson.M{"_id": userID}).Decode(&user)
@@ -83,7 +83,7 @@ func CheckIfAuthUserSharedWithUsername(ctx context.Context, username string, use
 	return false, nil
 }
 
-func GetUsernamesSharedWithAuth(ctx context.Context, userID primitive.ObjectID) ([]string, error) {
+func GetUsernamesSharedWithUser(ctx context.Context, userID primitive.ObjectID) ([]string, error) {
 	usersCollection := db.GetCollection("users")
 	user := models.User{}
 	err := usersCollection.FindOne(ctx, bson.M{"_id": userID}).Decode(&user)
@@ -91,4 +91,25 @@ func GetUsernamesSharedWithAuth(ctx context.Context, userID primitive.ObjectID) 
 		return nil, err
 	}
 	return user.SharedWithMe, nil
+}
+
+func TodoSharedWithUser(ctx context.Context, userID primitive.ObjectID, todoID primitive.ObjectID) (bool, error) {
+	usersCollection := db.GetCollection("users")
+	user := models.User{}
+	err := usersCollection.FindOne(ctx, bson.M{"_id": userID}).Decode(&user)
+	if err != nil {
+		return false, err
+	}
+
+	for _, username := range user.SharedWithMe {
+		sharedUser := models.User{}
+		err = usersCollection.FindOne(ctx, bson.M{"username": username}).Decode(&sharedUser)
+		if err != nil {
+			return false, err
+		}
+		if slices.Contains(sharedUser.Todos, todoID) {
+			return true, nil
+		}
+	}
+	return false, nil
 }
