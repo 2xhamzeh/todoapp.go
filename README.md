@@ -319,3 +319,127 @@ Removes a to-do item from the specified category.
 - `403 Forbidden` if user doesn't own todo (also if todo doesn't exist)
 - `404 Not Found` if the category doesn't exist
 - `500 Internal Server Error` on server error
+
+---
+
+### Share Management
+
+---
+
+#### **POST /share/{username}**
+Shares the authenticated user's todos with another user.
+
+**Request:**
+
+- Authorization: `Bearer <token>`
+- Path Parameters:
+  - `username`: The username of the user to share todos with.
+
+**Response:**
+
+- `200 OK` on success
+- `404 Not Found` if the username doesn't exist
+- `409 Conflict` if todos have already been shared with this user
+- `500 Internal Server Error` on server error
+
+---
+
+#### **DELETE /share/{username}**
+Unshares the authenticated user's todos from another user.
+
+**Request:**
+
+- Authorization: `Bearer <token>`
+- Path Parameters:
+  - `username`: The username of the user to unshare todos with.
+
+**Response:**
+
+- `200 OK` on success
+- `404 Not Found` if the username doesn't exist or if todos were not shared
+- `500 Internal Server Error` on server error
+
+---
+
+#### **GET /share/{username}**
+Fetches todos shared by a specific user with the authenticated user.
+
+**Request:**
+
+- Authorization: `Bearer <token>`
+- Path Parameters:
+  - `username`: The username of the user who shared their todos.
+
+**Response:**
+
+- `200 OK` with the list of shared todos:
+  ```json
+  [
+    {
+      "id": "objectID",
+      "title": "string",
+      "text": "string",
+      "done": "boolean"
+    }
+  ]
+  ```
+- `403 Forbidden` if the user hasn't shared their todos
+- `404 Not Found` if the username doesn't exist
+- `500 Internal Server Error` on server error
+
+---
+
+#### **GET /share**
+Fetches a list of users who have shared their todos with the authenticated user.
+
+**Request:**
+
+- Authorization: `Bearer <token>`
+
+**Response:**
+
+- `200 OK` with the list of usernames:
+  ```json
+  [
+    "username1",
+    "username2"
+  ]
+  ```
+- `500 Internal Server Error` on server error
+
+---
+
+#### **PUT /share/{id}**
+Updates a specific todo that was shared with the authenticated user.
+
+**Request:**
+
+- Authorization: `Bearer <token>`
+- Path Parameters:
+  - `id`: The ID of the todo to update.
+- Content-Type: `application/json`
+- Body:
+  ```json
+  {
+    "title": "string",
+    "text": "string",
+    "done": "boolean"
+  }
+  ```
+
+**Response:**
+
+- `200 OK` with the updated todo:
+  ```json
+  {
+    "id": "objectID",
+    "title": "string",
+    "text": "string",
+    "done": "boolean"
+  }
+  ```
+- `403 Forbidden` if the todo wasn't shared with the authenticated user
+- `404 Not Found` if the todo doesn't exist
+- `500 Internal Server Error` on server error
+
+---

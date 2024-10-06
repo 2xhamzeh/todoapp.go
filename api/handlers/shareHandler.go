@@ -37,7 +37,7 @@ func HandleShareWithUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if shared {
-		http.Error(w, "Already shared with provided username", http.StatusNotFound)
+		http.Error(w, "Already shared with provided username", http.StatusConflict)
 		return
 	}
 
