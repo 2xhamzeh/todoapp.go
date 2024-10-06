@@ -26,6 +26,12 @@ func router() *http.ServeMux {
 	myRouter.HandleFunc("POST  /category/{name}/{id}", middleware.AuthMiddleware(handlers.HandleAddTodoToCategory))
 	myRouter.HandleFunc("DELETE   /category/{name}/{id}", middleware.AuthMiddleware(handlers.HandleDeleteTodoFromCategory))
 
+	myRouter.HandleFunc("POST /share/{username}", middleware.AuthMiddleware(handlers.HandleShareWithUser))
+	myRouter.HandleFunc("DELETE /share/{username}", middleware.AuthMiddleware(handlers.HandleUnshareWithUser))
+	myRouter.HandleFunc("GET /share/{username}", middleware.AuthMiddleware(handlers.HandleGetSharedTodosFromUser))
+	myRouter.HandleFunc("GET /share", middleware.AuthMiddleware(handlers.HandleGetUsersSharedWithMe))
+	myRouter.HandleFunc("PUT /share/{id}", middleware.AuthMiddleware(handlers.HandleChangeDoneOfSharedTodo))
+
 	return myRouter
 }
 

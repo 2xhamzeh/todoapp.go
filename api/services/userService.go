@@ -8,6 +8,7 @@ import (
 	"errors"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 func CreateUser(ctx context.Context, u models.AuthDTO) error {
@@ -20,21 +21,28 @@ func CreateUser(ctx context.Context, u models.AuthDTO) error {
 	}
 
 	user := models.User{
-		ID:         primitive.NewObjectID(),
-		Username:   u.Username,
-		Password:   hashedPassword,
-		Todos:      []primitive.ObjectID{},
-		Categories: []models.Category{},
+		ID:           primitive.NewObjectID(),
+		Username:     u.Username,
+		Password:     hashedPassword,
+		Todos:        []primitive.ObjectID{},
+		Categories:   []models.Category{},
+		SharedWithMe: []string{},
 	}
 
 	_, err = usersCollection.InsertOne(ctx, user)
 	return err
 }
 
-func UsernameExists(ctx context.Context, username string) error {
+func UsernameExists(ctx context.Context, username string) (bool, error) {
 	usersCollection := db.GetCollection("users")
 	err := usersCollection.FindOne(ctx, bson.M{"username": username}).Err()
-	return err
+	if err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return false, nil
+		}
+		return false, err
+	}
+	return true, nil
 }
 
 func LoginUser(ctx context.Context, u models.AuthDTO) (*string, error) {

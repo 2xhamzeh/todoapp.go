@@ -5,11 +5,12 @@ import (
 )
 
 type User struct {
-	ID         primitive.ObjectID   `json:"id" bson:"_id"`
-	Username   string               `json:"username" bson:"username"`
-	Password   string               `json:"-" bson:"password"`
-	Todos      []primitive.ObjectID `json:"todos" bson:"todos"`
-	Categories []Category           `json:"categories" bson:"categories"`
+	ID           primitive.ObjectID   `json:"id" bson:"_id"`
+	Username     string               `json:"username" bson:"username"`
+	Password     string               `json:"-" bson:"password"`
+	Todos        []primitive.ObjectID `json:"todos" bson:"todos"`
+	Categories   []Category           `json:"categories" bson:"categories"`
+	SharedWithMe []string             `json:"sharedWithMe" bson:"sharedWithMe"`
 }
 
 type AuthDTO struct {

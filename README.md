@@ -133,7 +133,7 @@ Fields are optional. This method is meant to be used when you want to mark a tod
   - example:
     ```json
     {
-    "done": false
+    "done": true
     }
     ```
 
@@ -316,6 +316,6 @@ Removes a to-do item from the specified category.
 - `200 OK` on success
 - `400 Bad request` if id of todo isn't valid
 - `401 Unauthorized` if token isn't valid
-- `403 Forbidden` if user doesn't own todo (also if todo doesn't)
+- `403 Forbidden` if user doesn't own todo (also if todo doesn't exist)
 - `404 Not Found` if the category doesn't exist
 - `500 Internal Server Error` on server error

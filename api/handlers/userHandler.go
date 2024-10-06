@@ -2,7 +2,7 @@ package handlers
 
 import (
 	"ToDo/api/models"
-	user2 "ToDo/api/services"
+	"ToDo/api/services"
 	"encoding/json"
 	"errors"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -25,18 +25,18 @@ func HandleRegister(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// check if username exists
-	err := user2.UsernameExists(r.Context(), user.Username)
-	if err == nil {
+	exists, err := services.UsernameExists(r.Context(), user.Username)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if exists {
 		http.Error(w, "Username taken", http.StatusBadRequest)
 		return
-	} else {
-		if !errors.Is(err, mongo.ErrNoDocuments) {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-		}
 	}
 
 	// save user
-	err = user2.CreateUser(r.Context(), user)
+	err = services.CreateUser(r.Context(), user)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -59,7 +59,7 @@ func HandleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, err := user2.LoginUser(r.Context(), user)
+	token, err := services.LoginUser(r.Context(), user)
 	if err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
 			http.Error(w, "User not found", http.StatusNotFound)
