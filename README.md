@@ -3,6 +3,30 @@
 ## About:
 #### This is a simple api written in go. It helps you manage todo items
 
+---
+## Setup:
+
+#### Database:
+You can install mongodb community edition and run it locally or pull a docker image and run a container.
+
+Container setup:
+1. Pull the Image
+```
+docker pull mongodb/mongodb-community-server:latest
+```
+2. Run the image as a container
+```
+docker run --name mongodb -p 27017:27017 -d mongodb/mongodb-community-server:latest
+```
+
+### APP
+
+To run the app just run the main file like you would another go app.
+```
+go run main.go
+```
+
+
 ## API Documentation
 
 ### Authentication
