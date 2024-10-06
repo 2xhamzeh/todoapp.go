@@ -438,8 +438,8 @@ Updates a specific todo that was shared with the authenticated user.
     "done": "boolean"
   }
   ```
+- `400 Bad Request` if the body or `id` are invalid
 - `403 Forbidden` if the todo wasn't shared with the authenticated user
-- `404 Not Found` if the todo doesn't exist
 - `500 Internal Server Error` on server error
 
 ---
