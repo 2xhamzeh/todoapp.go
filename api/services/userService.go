@@ -68,3 +68,13 @@ func LoginUser(ctx context.Context, u models.AuthDTO) (*string, error) {
 	}
 	return &token, nil
 }
+
+func GetIDFromUsername(ctx context.Context, username string) (primitive.ObjectID, error) {
+	usersCollection := db.GetCollection("users")
+	user := models.User{}
+	err := usersCollection.FindOne(ctx, bson.M{"username": username}).Decode(&user)
+	if err != nil {
+		return primitive.NilObjectID, err
+	}
+	return user.ID, nil
+}
